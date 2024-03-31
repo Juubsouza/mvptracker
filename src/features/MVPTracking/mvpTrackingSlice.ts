@@ -1,6 +1,7 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { RootState } from "../../app/store";
 import { MVPMonster } from "../../types";
+import { ragnarokAPITimeToHourNumber } from "../../utils/formatter";
 
 interface MVPTrackingState {
   isLoading: boolean;
@@ -14,6 +15,28 @@ const initialState: MVPTrackingState = {
   addedMVPs: [],
 };
 
+function getRemainingRespawnTime(mvp: MVPMonster) {
+  if (!mvp.lastKill) {
+    return -1;
+  }
+
+  const lastKillDate = new Date(mvp.lastKill);
+  const respawnTimeInHour = ragnarokAPITimeToHourNumber(mvp.maps[0].frequency);
+
+  const nextRespawnDate = new Date(
+    lastKillDate.getTime() + respawnTimeInHour * 60 * 60 * 1000
+  );
+  const now = new Date();
+
+  const remainingTime = nextRespawnDate.getTime() - now.getTime();
+
+  if (remainingTime < 0) {
+    return -1;
+  }
+
+  return remainingTime;
+}
+
 export const mvpTrackingSlice = createSlice({
   name: "mvpTracking",
   initialState,
@@ -25,15 +48,25 @@ export const mvpTrackingSlice = createSlice({
       state.isLoading = false;
     },
     addMVP: (state, action: PayloadAction<MVPMonster>) => {
-      const mvp = state.addedMVPs.findIndex(
+      const mvpIndex = state.addedMVPs.findIndex(
         (mvp) => mvp.monster_id === action.payload.monster_id
       );
 
-      if (mvp !== -1) {
-        state.addedMVPs[mvp] = action.payload;
+      if (mvpIndex !== -1) {
+        state.addedMVPs[mvpIndex] = action.payload;
       } else {
         state.addedMVPs.push(action.payload);
       }
+
+      state.addedMVPs.sort((a, b) => {
+        const aRemainingTime = getRemainingRespawnTime(a);
+        const bRemainingTime = getRemainingRespawnTime(b);
+
+        if (aRemainingTime === -1) return 1;
+        if (bRemainingTime === -1) return -1;
+
+        return aRemainingTime - bRemainingTime;
+      });
     },
     removeMVP: (state, action: PayloadAction<MVPMonster>) => {
       state.addedMVPs = state.addedMVPs.filter(

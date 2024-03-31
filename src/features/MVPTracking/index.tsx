@@ -1,5 +1,11 @@
-import { Button, Input, Text } from "@rneui/themed";
-import { FlatList, View, Keyboard } from "react-native";
+import { Button, Dialog, Input, Text } from "@rneui/themed";
+import {
+  FlatList,
+  View,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+} from "react-native";
 
 import {
   selectIsLoading,
@@ -22,11 +28,15 @@ import {
   BottomSheetModalProvider,
 } from "@gorhom/bottom-sheet";
 import { Counter } from "../../components/Counter";
-import { ragnarokAPITimeToHourNumber } from "../../utils/formatter";
+import {
+  ragnarokAPITimeToHourNumber,
+  transformMVPName,
+} from "../../utils/formatter";
 import DropdownAlert, {
   DropdownAlertData,
   DropdownAlertType,
 } from "react-native-dropdownalert";
+import * as Notifications from "expo-notifications";
 
 export function MVPTracking() {
   const { theme } = useTheme();
@@ -39,17 +49,45 @@ export function MVPTracking() {
   const [mvpIDInput, setMvpIDInput] = useState<string>("");
   const [editableRespawnTime, setEditableRespawnTime] = useState<number>(0);
   const [lastIndexPressed, setLastIndexPressed] = useState<number>(-1);
+  const [removeMVPDialogVisible, setRemoveMVPDialogVisible] = useState(false);
+  const [mvpToRemove, setMvpToRemove] = useState<MVPMonster | null>(null);
+  const notificationIdentifiers = useRef(new Map()).current;
 
   let alert = (_data: DropdownAlertData) =>
     new Promise<DropdownAlertData>((res) => res);
 
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
 
-  const snapPoints = useMemo(() => ["25%", "25%"], []);
+  const snapPoints = useMemo(() => ["30%", "30%"], []);
 
   const handlePresentModalPress = useCallback(() => {
     bottomSheetModalRef.current?.present();
   }, []);
+
+  async function scheduleNotificationForMVP(mvp: MVPMonster) {
+    const previousNotificationIdentifier = notificationIdentifiers.get(
+      mvp.monster_info
+    );
+    if (previousNotificationIdentifier) {
+      await Notifications.cancelScheduledNotificationAsync(
+        previousNotificationIdentifier
+      );
+    }
+
+    const notificationIdentifier =
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: `${transformMVPName(mvp.monster_info)} is about to respawn`,
+          body: "Get ready to kill it!",
+        },
+        trigger: {
+          seconds: 60 * 60 * ragnarokAPITimeToHourNumber(mvp.maps[0].frequency),
+          repeats: false,
+        },
+      });
+
+    notificationIdentifiers.set(mvp.monster_info, notificationIdentifier);
+  }
 
   async function handleAddToList() {
     Keyboard.dismiss();
@@ -60,11 +98,18 @@ export function MVPTracking() {
       const response = await getMVP(Number(mvpIDInput));
       const mvp = response.data;
 
-      if (!mvp.skills.mode.some((mode) => mode.toLowerCase().includes("mvp"))) {
+      if (
+        !mvp.skills.mode.some(
+          (mode) =>
+            mode.toLowerCase().includes("mvp") ||
+            mode.toLowerCase().includes("boss")
+        )
+      ) {
         alert({
           type: DropdownAlertType.Warn,
           title: "Error",
-          message: "The monster provided is not an MVP. Try a different ID.",
+          message:
+            "The monster provided is not a MVP/boss. Try a different ID.",
         });
         return;
       }
@@ -100,6 +145,7 @@ export function MVPTracking() {
       let updatedMVP = { ...mvp, lastKill: new Date().toISOString() };
 
       dispatch(addMVP(updatedMVP));
+      scheduleNotificationForMVP(updatedMVP);
     };
   }
 
@@ -116,15 +162,46 @@ export function MVPTracking() {
     bottomSheetModalRef.current?.dismiss();
   }
 
-  function handleRemoveMVP(mvp: MVPMonster) {
-    console.log("Remove MVP pressed!");
-    dispatch(removeMVP(mvp));
+  function handleRemoveMVP() {
+    dispatch(removeMVP(mvpToRemove as MVPMonster));
+  }
+
+  function showRemoveMVPDialog(mvp: MVPMonster) {
+    setMvpToRemove(mvp);
+    setRemoveMVPDialogVisible(true);
   }
 
   return (
-    <>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={{ flex: 1 }}
+    >
       <DropdownAlert alert={(func) => (alert = func)} />
       <Header />
+
+      <Dialog
+        isVisible={removeMVPDialogVisible}
+        onBackdropPress={() =>
+          setRemoveMVPDialogVisible(!removeMVPDialogVisible)
+        }
+      >
+        <Dialog.Title title="Are you sure you want to remove this MVP from the list?" />
+        <Dialog.Actions>
+          <Dialog.Button
+            title="Yes, remove"
+            onPress={() => {
+              handleRemoveMVP();
+              setRemoveMVPDialogVisible(false);
+            }}
+          />
+          <Dialog.Button
+            title="Cancel"
+            onPress={() => {
+              setRemoveMVPDialogVisible(false);
+            }}
+          />
+        </Dialog.Actions>
+      </Dialog>
 
       <View
         style={{
@@ -145,7 +222,7 @@ export function MVPTracking() {
                 handleEditRespawnTimePressed(item, index)
               }
               markAsKilledFunction={handleMVPMarkAsKilled(index)}
-              removePressed={() => handleRemoveMVP(item)}
+              removePressed={() => showRemoveMVPDialog(item)}
             />
           )}
           keyExtractor={(item) => item.monster_id.toString()}
@@ -189,6 +266,7 @@ export function MVPTracking() {
             value={mvpIDInput}
             onChangeText={(text) => setMvpIDInput(text)}
             onSubmitEditing={handleAddToList}
+            returnKeyType="done"
           />
           <Button
             title="Add to the list"
@@ -247,6 +325,6 @@ export function MVPTracking() {
           </BottomSheetView>
         </BottomSheetModal>
       </BottomSheetModalProvider>
-    </>
+    </KeyboardAvoidingView>
   );
 }

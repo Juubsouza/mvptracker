@@ -6,7 +6,7 @@ import { Text, Card, Button, useTheme, Icon } from "@rneui/themed";
 import { MVPMonster, Map } from "../types";
 import {
   fromISOStringToHHMM,
-  ragnarokAPITimeToHours,
+  ragnarokAPITimeToHourNumber,
   transformMVPName,
 } from "../utils/formatter";
 
@@ -24,6 +24,71 @@ export function MVPListItem({
   removePressed,
 }: Props) {
   const { theme } = useTheme();
+
+  function getRemainingRespawnTime(mvp: MVPMonster) {
+    if (!mvp.lastKill) {
+      return -1;
+    }
+
+    const lastKillDate = new Date(mvp.lastKill);
+    const respawnTimeInHour = ragnarokAPITimeToHourNumber(
+      mvp.maps[0].frequency
+    );
+
+    const nextRespawnDate = new Date(
+      lastKillDate.getTime() + respawnTimeInHour * 60 * 60 * 1000
+    );
+    const now = new Date();
+
+    const remainingTime = nextRespawnDate.getTime() - now.getTime();
+
+    if (remainingTime < 0) {
+      return -1;
+    }
+
+    return remainingTime;
+  }
+
+  function monsterIsAboutToRespawn() {
+    if (!mvp.lastKill) {
+      return false;
+    }
+
+    const remainingTime = getRemainingRespawnTime(mvp);
+
+    if (typeof remainingTime === "number") {
+      return remainingTime <= 5 * 60 * 1000;
+    }
+
+    return false;
+  }
+
+  function getNextRespawnTime() {
+    if (!mvp.lastKill) {
+      return "Not yet killed";
+    }
+
+    const lastKillDate = new Date(mvp.lastKill);
+    const respawnTimeInHour = ragnarokAPITimeToHourNumber(
+      mvp.maps[0].frequency
+    );
+
+    const nextRespawnDate = new Date(
+      lastKillDate.getTime() + respawnTimeInHour * 60 * 60 * 1000
+    );
+
+    return fromISOStringToHHMM(nextRespawnDate.toISOString());
+  }
+
+  function getNextRespawnTextColor() {
+    const isDarkMode = theme.mode === "dark";
+
+    if (monsterIsAboutToRespawn()) {
+      return "#18645e";
+    }
+
+    return isDarkMode ? "#fff" : "#000";
+  }
 
   return (
     <Card
@@ -46,15 +111,16 @@ export function MVPListItem({
       >
         <Icon type="fontisto" name="trash" color={theme.colors.error} />
       </TouchableOpacity>
-      <Card.Title
+      <Text
         style={{
+          alignSelf: "center",
           fontSize: 20,
-          fontFamily: "BaiJamjuree-SemiBoldItalic",
+          fontFamily: "BaiJamjuree-Bold",
           color: theme.mode === "light" ? theme.colors.primary : "#fff",
         }}
       >
         {transformMVPName(mvp.monster_info)}
-      </Card.Title>
+      </Text>
       <TouchableOpacity
         style={{
           position: "absolute",
@@ -98,8 +164,17 @@ export function MVPListItem({
             </Text>
           </View>
           <View>
-            <Text style={{ fontFamily: "BaiJamjuree-Bold" }}>Respawn time</Text>
-            <Text>{ragnarokAPITimeToHours(mvp.maps[0].frequency)}</Text>
+            <Text
+              style={{
+                fontFamily: "BaiJamjuree-Bold",
+                color: getNextRespawnTextColor(),
+              }}
+            >
+              Next respawn
+            </Text>
+            <Text style={{ color: getNextRespawnTextColor() }}>
+              {getNextRespawnTime()}
+            </Text>
           </View>
         </View>
       </View>
