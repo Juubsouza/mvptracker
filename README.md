@@ -1,4 +1,4 @@
-### MVP Tracker
+# MVP Tracker
 
 This is a simple application built with the purpose of learning a bit more about React Native, and related concepts such as Redux and Push notifications.
 The core purpose of the app is to be a sort of companion app for the game Ragnarok Online, keeping track of a list of "MVP" (monsters) and receiving push notifications when they are about to respawn.
