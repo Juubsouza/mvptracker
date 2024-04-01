@@ -121,7 +121,7 @@ export default function App() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <Provider store={store}>
         <ThemeProvider theme={theme}>
-          <StatusBar style="auto" />
+          <StatusBar style={"light"} />
           <SafeAreaProvider>
             <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
               <MVPTracking />
