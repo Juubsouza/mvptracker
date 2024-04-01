@@ -1,3 +1,8 @@
+Light mode              |  Dark mode
+:-------------------------:|:-------------------------:
+![](https://raw.githubusercontent.com/Juubsouza/mvptracker/master/assets/readme-pics/main-light.png)  |  ![](https://raw.githubusercontent.com/Juubsouza/mvptracker/master/assets/readme-pics/main-dark.png)
+![](https://raw.githubusercontent.com/Juubsouza/mvptracker/master/assets/readme-pics/edit-light.png)  |  ![](https://raw.githubusercontent.com/Juubsouza/mvptracker/master/assets/readme-pics/edit-dark.png)
+
 # MVP Tracker
 
 This is a simple application built with the purpose of learning a bit more about React Native, and related concepts such as Redux and Push notifications.
