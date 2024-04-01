@@ -159,11 +159,21 @@ export function MVPTracking() {
     };
 
     dispatch(addMVP(updatedMVP));
+    scheduleNotificationForMVP(updatedMVP);
     bottomSheetModalRef.current?.dismiss();
   }
 
   function handleRemoveMVP() {
-    dispatch(removeMVP(mvpToRemove as MVPMonster));
+    if (!mvpToRemove) return;
+
+    const notificationIdentifier = notificationIdentifiers.get(
+      mvpToRemove.monster_info
+    );
+
+    if (notificationIdentifier)
+      Notifications.cancelScheduledNotificationAsync(notificationIdentifier);
+
+    dispatch(removeMVP(mvpToRemove));
   }
 
   function showRemoveMVPDialog(mvp: MVPMonster) {

@@ -5,10 +5,10 @@
     "scheme": "mvptracker",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/mvptracker-icon.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/splash.png",
+      "image": "./assets/mvptracker-splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -22,7 +22,7 @@
       "package": "com.jeevo.mvptracker",
       "versionCode": 1,
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/mvptracker-adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
       "googleServicesFile": "./google-services.json"
@@ -46,6 +46,13 @@
           "ios": {
             "flipper": true
           }
+        }
+      ]
+      ,
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/mvptracker-notification-icon.png"
         }
       ]
     ],
